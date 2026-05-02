@@ -1,0 +1,458 @@
+{
+  "info": {
+    "_postman_id": "b703046f-6886-4164-8030-da63cfd8db1e",
+    "name": "crud-master API tests",
+    "description": "This collection provides comprehensive testing coverage for a microservices architecture consisting of three core APIs: Inventory, Billing, and Gateway. It contains 10 test requests organized into three logical folders:\n\n- **Inventory API tests** - CRUD operations for movie management, including endpoints to retrieve all movies, get a specific movie, add new movies, update existing movies, and delete movies.\n    \n- **Billing API tests** - Billing system operations including gateway status checks and billing validation endpoints.\n    \n- **Gateway API tests** - API gateway routing functionality, including proxy routing, message queue routing, and service availability testing.\n    \n\nThe collection is designed to validate the core functionality of these APIs through standard HTTP methods (GET, POST, PUT, DELETE) and includes error handling scenarios such as service unavailability testing. This collection serves as a testing suite for development and quality assurance workflows.\n\nUse `{{base_url}}/api/movies` and `{{base_url}}/api/billing` in all your requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "53619934",
+    "_collection_link": "https://go.postman.co/collection/53619934-b703046f-6886-4164-8030-da63cfd8db1e?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Inventory API tests",
+      "item": [
+        {
+          "name": "Inventory API Get Movies",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Inception Updated\",\"description\":\"Sci-fi updated\"}"
+            },
+            "url": {
+              "raw": "http://192.168.56.10:3000/api/movies",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "56",
+                "10"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "movies"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Inventory API Add Movie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Rush Hour\",\"description\":\"Comedy\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://192.168.56.10:3000/api/movies",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "56",
+                "10"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "movies"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Inventory API Get Movie",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://192.168.56.10:3000/api/movies?title=Rush_Hour",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "56",
+                "10"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "movies"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "Rush_Hour"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Inventory API Update Movie",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Inception Updated\",\"description\":\"Sci-fi updated\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://192.168.56.10:3000/api/movies/1?Content-Type=application/json",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "56",
+                "10"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "movies",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Inventory API Delete Movie",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://192.168.56.10:3000/api/movies/1",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "56",
+                "10"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "movies",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Billing API tests",
+      "item": [
+        {
+          "name": "Billing API Gateway Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 202 Accepted\", function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains success message\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.eql(\"Message posted\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\": \"5\", \"number_of_items\": 7, \"total_amount\": 370.78}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://192.168.56.10:3000/api/billing",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "56",
+                "10"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "billing"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Billing API Validation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\": \"\", \"number_of_items\": -1, \"total_amount\": \"invalid\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://192.168.56.10:3000/api/billing",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "56",
+                "10"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "billing"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Gateway API tests",
+      "item": [
+        {
+          "name": "Gateway API Proxy Routing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Gateway successfully proxied to Inventory\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"Verify proxy headers are cleaned\", function () {",
+                  "    // Ensuring 'transfer-encoding' was removed as per your code logic",
+                  "    pm.expect(pm.response.headers.get(\"transfer-encoding\")).to.be.undefined;",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://192.168.56.10:3000/api/movies",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "56",
+                "10"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "movies"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Gateway API Message Queue Routing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Gateway successfully queued billing message\", function () {",
+                  "    pm.response.to.have.status(202);",
+                  "    pm.expect(pm.response.json().message).to.eql(\"Message posted\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\": \"1\", \"number_of_items\": 1, \"total_amount\": 10.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://192.168.56.10:3000/api/billing",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "56",
+                "10"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "billing"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Service Unavailable Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Gateway correctly identifies service as unavailable\", function () {",
+                  "    pm.response.to.have.status(502);",
+                  "    pm.expect(pm.response.json().error).to.eql(\"inventory service unavailable\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://192.168.56.10:3000/api/movies",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "56",
+                "10"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "movies"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": ""
+    }
+  ]
+}
