@@ -9,9 +9,17 @@ resource "aws_ecs_task_definition" "api_gateway" {
   container_definitions = jsonencode([
     {
       name      = "api-gateway-app"
-      image     = "borsok/api-gateway-app:v1"
+      image     = "327425719370.dkr.ecr.eu-north-1.amazonaws.com/api-gateway-app:v1"
       essential = true
       portMappings = [{ containerPort = 3000, protocol = "tcp" }]
+            logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/microservices/api-gateway-app"
+          "awslogs-region"        = "eu-north-1"
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
       environment = [
         { name = "INVENTORY_URL", value = "http://inventory-app.microservices.local:8080" },
         { name = "RABBITMQ_HOST", value = "rabbitmq.microservices.local" },
@@ -36,9 +44,17 @@ resource "aws_ecs_task_definition" "inventory_app" {
   container_definitions = jsonencode([
     {
       name      = "inventory-app"
-      image     = "borsok/inventory-app:v1"
+      image     = "327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-app:v1"
       essential = true
       portMappings = [{ containerPort = 8080, protocol = "tcp" }]
+            logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/microservices/inventory-app"
+          "awslogs-region"        = "eu-north-1"
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
       environment = [
         { name = "DB_HOST", value = "inventory-db.microservices.local" },
         { name = "DB_PORT", value = "5432" },
@@ -63,9 +79,17 @@ resource "aws_ecs_task_definition" "billing_app" {
   container_definitions = jsonencode([
     {
       name      = "billing-app"
-      image     = "borsok/billing-app:v1"
+      image     = "327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-app:v1"
       essential = true
       portMappings = [{ containerPort = 8080, protocol = "tcp" }]
+            logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/microservices/billing-app"
+          "awslogs-region"        = "eu-north-1"
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
       environment = [
         { name = "DB_HOST", value = "billing-db.microservices.local" },
         { name = "DB_PORT", value = "5432" },
@@ -94,12 +118,20 @@ resource "aws_ecs_task_definition" "rabbitmq" {
   container_definitions = jsonencode([
     {
       name      = "rabbitmq-server"
-      image     = "borsok/rabbitmq-server:v1"
+      image     = "327425719370.dkr.ecr.eu-north-1.amazonaws.com/rabbitmq-server:v1"
       essential = true
       portMappings = [
         { containerPort = 5672, protocol = "tcp" },
         { containerPort = 15672, protocol = "tcp" }
       ]
+            logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/microservices/rabbitmq-server"
+          "awslogs-region"        = "eu-north-1"
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
       environment = [
         { name = "RABBITMQ_USER", value = "billing_user" }
       ]
@@ -129,9 +161,17 @@ resource "aws_ecs_task_definition" "inventory_db" {
   container_definitions = jsonencode([
     {
       name      = "inventory-db"
-      image     = "borsok/inventory-db:v1"
+      image     = "327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-db:v1"
       essential = true
       portMappings = [{ containerPort = 5432, protocol = "tcp" }]
+            logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/microservices/inventory-db"
+          "awslogs-region"        = "eu-north-1"
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
       environment = [
         { name = "DB_NAME", value = "movies_db" },
         { name = "DB_USER", value = "movies_user" }
@@ -165,9 +205,17 @@ resource "aws_ecs_task_definition" "billing_db" {
   container_definitions = jsonencode([
     {
       name      = "billing-db"
-      image     = "borsok/billing-db:v1"
+      image     = "327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-db:v1"
       essential = true
       portMappings = [{ containerPort = 5432, protocol = "tcp" }]
+            logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/microservices/billing-db"
+          "awslogs-region"        = "eu-north-1"
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
       environment = [
         { name = "DB_NAME", value = "billing_db" },
         { name = "DB_USER", value = "orders_user" }
