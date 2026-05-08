@@ -6,6 +6,11 @@ resource "aws_ecs_task_definition" "api_gateway" {
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
+    runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
+  
   container_definitions = jsonencode([
     {
       name      = "api-gateway-app"
@@ -21,8 +26,8 @@ resource "aws_ecs_task_definition" "api_gateway" {
         }
       }
       environment = [
-        { name = "INVENTORY_URL", value = "http://inventory-app.microservices.local:8080" },
-        { name = "RABBITMQ_HOST", value = "rabbitmq.microservices.local" },
+        { name = "INVENTORY_URL", value = "http://inventory-app.backend.local:8080" },
+        { name = "RABBITMQ_HOST", value = "rabbitmq.backend.local" },
         { name = "RABBITMQ_PORT", value = "5672" },
         { name = "RABBITMQ_USER", value = "billing_user" }
       ]
@@ -41,6 +46,11 @@ resource "aws_ecs_task_definition" "inventory_app" {
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
+    runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
+  
   container_definitions = jsonencode([
     {
       name      = "inventory-app"
@@ -56,7 +66,7 @@ resource "aws_ecs_task_definition" "inventory_app" {
         }
       }
       environment = [
-        { name = "DB_HOST", value = "inventory-db.microservices.local" },
+        { name = "DB_HOST", value = "inventory-db.backend.local" },
         { name = "DB_PORT", value = "5432" },
         { name = "DB_NAME", value = "movies_db" },
         { name = "DB_USER", value = "movies_user" }
@@ -76,6 +86,11 @@ resource "aws_ecs_task_definition" "billing_app" {
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
+    runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
+  
   container_definitions = jsonencode([
     {
       name      = "billing-app"
@@ -91,11 +106,11 @@ resource "aws_ecs_task_definition" "billing_app" {
         }
       }
       environment = [
-        { name = "DB_HOST", value = "billing-db.microservices.local" },
+        { name = "DB_HOST", value = "billing-db.backend.local" },
         { name = "DB_PORT", value = "5432" },
         { name = "DB_NAME", value = "billing_db" },
         { name = "DB_USER", value = "orders_user" },
-        { name = "RABBITMQ_HOST", value = "rabbitmq.microservices.local" },
+        { name = "RABBITMQ_HOST", value = "rabbitmq.backend.local" },
         { name = "RABBITMQ_PORT", value = "5672" },
         { name = "RABBITMQ_USER", value = "billing_user" }
       ]
@@ -115,6 +130,11 @@ resource "aws_ecs_task_definition" "rabbitmq" {
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
+    runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
+  
   container_definitions = jsonencode([
     {
       name      = "rabbitmq-server"
@@ -150,6 +170,11 @@ resource "aws_ecs_task_definition" "inventory_db" {
   memory                   = "1024"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
+    runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
+  
   volume {
     name = "inventory-data"
     efs_volume_configuration {
@@ -194,6 +219,11 @@ resource "aws_ecs_task_definition" "billing_db" {
   memory                   = "1024"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
+    runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
+  
   volume {
     name = "billing-data"
     efs_volume_configuration {

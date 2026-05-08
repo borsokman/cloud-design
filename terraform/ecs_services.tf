@@ -34,7 +34,7 @@ resource "aws_ecs_service" "inventory_app_service" {
   }
 
   service_registries {
-    registry_arn = aws_service_discovery_service.inventory_app.arn
+    registry_arn = aws_service_discovery_service.sd_services["inventory-app"].arn
   }
 }
 
@@ -52,7 +52,7 @@ resource "aws_ecs_service" "billing_app_service" {
   }
 
   service_registries {
-    registry_arn = aws_service_discovery_service.billing_app.arn
+    registry_arn = aws_service_discovery_service.sd_services["billing-app"].arn
   }
 }
 
@@ -70,7 +70,7 @@ resource "aws_ecs_service" "rabbitmq_service" {
   }
 
   service_registries {
-    registry_arn = aws_service_discovery_service.rabbitmq.arn
+    registry_arn = aws_service_discovery_service.sd_services["rabbitmq"].arn
   }
 }
 
@@ -88,7 +88,7 @@ resource "aws_ecs_service" "inventory_db_service" {
   }
 
   service_registries {
-    registry_arn = aws_service_discovery_service.inventory_db.arn
+    registry_arn = aws_service_discovery_service.sd_services["inventory-db"].arn
   }
 }
 
@@ -106,6 +106,6 @@ resource "aws_ecs_service" "billing_db_service" {
   }
 
   service_registries {
-    registry_arn = aws_service_discovery_service.billing_db.arn
+    registry_arn = aws_service_discovery_service.sd_services["billing-db"].arn
   }
 }
