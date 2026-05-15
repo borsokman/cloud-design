@@ -81,6 +81,14 @@ resource "aws_security_group" "internal_sg" {
     self      = true
   }
 
+    # Allow EFS / NFS (2049) so databases can mount their hard drives
+  ingress {
+    from_port = 2049
+    to_port   = 2049
+    protocol  = "tcp"
+    self      = true
+  }
+
   egress {
     from_port   = 0
     to_port     = 0

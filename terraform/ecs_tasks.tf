@@ -106,6 +106,7 @@ resource "aws_ecs_task_definition" "billing_app" {
         }
       }
       environment = [
+        { name = "PYTHONUNBUFFERED", value = "1" },
         { name = "DB_HOST", value = "billing-db.backend.local" },
         { name = "DB_PORT", value = "5432" },
         { name = "DB_NAME", value = "billing_db" },
@@ -130,7 +131,7 @@ resource "aws_ecs_task_definition" "rabbitmq" {
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
-    runtime_platform {
+  runtime_platform {
     operating_system_family = "LINUX"
     cpu_architecture        = "ARM64"
   }
@@ -138,13 +139,13 @@ resource "aws_ecs_task_definition" "rabbitmq" {
   container_definitions = jsonencode([
     {
       name      = "rabbitmq-server"
-      image     = "327425719370.dkr.ecr.eu-north-1.amazonaws.com/rabbitmq-server:v1"
+      image     = "rabbitmq:3-management"
       essential = true
       portMappings = [
         { containerPort = 5672, protocol = "tcp" },
         { containerPort = 15672, protocol = "tcp" }
       ]
-            logConfiguration = {
+      logConfiguration = {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = "/ecs/microservices/rabbitmq-server"
@@ -153,10 +154,10 @@ resource "aws_ecs_task_definition" "rabbitmq" {
         }
       }
       environment = [
-        { name = "RABBITMQ_USER", value = "billing_user" }
+        { name = "RABBITMQ_DEFAULT_USER", value = "billing_user" }
       ]
       secrets = [
-        { name = "RABBITMQ_PASSWORD", valueFrom = aws_ssm_parameter.rabbitmq_password.arn }
+        { name = "RABBITMQ_DEFAULT_PASS", valueFrom = aws_ssm_parameter.rabbitmq_password.arn }
       ]
     }
   ])
@@ -170,17 +171,9 @@ resource "aws_ecs_task_definition" "inventory_db" {
   memory                   = "1024"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
-    runtime_platform {
+  runtime_platform {
     operating_system_family = "LINUX"
     cpu_architecture        = "ARM64"
-  }
-  
-  volume {
-    name = "inventory-data"
-    efs_volume_configuration {
-      file_system_id = aws_efs_file_system.db_storage.id
-      root_directory = "/"
-    }
   }
 
   container_definitions = jsonencode([
@@ -189,7 +182,7 @@ resource "aws_ecs_task_definition" "inventory_db" {
       image     = "327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-db:v1"
       essential = true
       portMappings = [{ containerPort = 5432, protocol = "tcp" }]
-            logConfiguration = {
+      logConfiguration = {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = "/ecs/microservices/inventory-db"
@@ -204,9 +197,6 @@ resource "aws_ecs_task_definition" "inventory_db" {
       secrets = [
         { name = "DB_PASSWORD", valueFrom = aws_ssm_parameter.inventory_db_password.arn }
       ]
-      mountPoints = [
-        { sourceVolume = "inventory-data", containerPath = "/var/lib/postgresql/13/main" }
-      ]
     }
   ])
 }
@@ -219,17 +209,9 @@ resource "aws_ecs_task_definition" "billing_db" {
   memory                   = "1024"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
-    runtime_platform {
+  runtime_platform {
     operating_system_family = "LINUX"
     cpu_architecture        = "ARM64"
-  }
-  
-  volume {
-    name = "billing-data"
-    efs_volume_configuration {
-      file_system_id = aws_efs_file_system.db_storage.id
-      root_directory = "/"
-    }
   }
 
   container_definitions = jsonencode([
@@ -238,7 +220,7 @@ resource "aws_ecs_task_definition" "billing_db" {
       image     = "327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-db:v1"
       essential = true
       portMappings = [{ containerPort = 5432, protocol = "tcp" }]
-            logConfiguration = {
+      logConfiguration = {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = "/ecs/microservices/billing-db"
@@ -252,9 +234,6 @@ resource "aws_ecs_task_definition" "billing_db" {
       ]
       secrets = [
         { name = "DB_PASSWORD", valueFrom = aws_ssm_parameter.billing_db_password.arn }
-      ]
-      mountPoints = [
-        { sourceVolume = "billing-data", containerPath = "/var/lib/postgresql/13/main" }
       ]
     }
   ])
