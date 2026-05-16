@@ -1,188 +1,212 @@
-# orchestrator
+# AWS Microservices Migration & Infrastructure as Code (IaC)
 
-This project provisions a microservices architecture using Kubernetes (K3s) and Vagrant. It migrates a multi-tier application into isolated Pods running PostgreSQL, RabbitMQ, and Python/Pika services.
+## Overview
 
-## Architecture Overview
+This project demonstrates the migration of a microservices architecture from a local Kubernetes and Docker Hub environment into a fully managed, highly available, and secure AWS Cloud infrastructure. The entire infrastructure is provisioned automatically using **Terraform** (Infrastructure as Code).
 
-It implements a scalable microservices architecture on a 2-node Kubernetes (K3s) cluster provisioned via Vagrant. The system is designed for high availability, asynchronous processing, and persistent data storage.
+## Architecture & Migration Strategy
 
-### Infrastructure (K3s Cluster)
+Previously, the application relied on local Kubernetes manifests and custom Docker Hub images. To improve scalability, security, and operational overhead, we migrated to AWS native services:
 
-- **Master Node:** Runs the Kubernetes control plane and API server (`192.168.56.10`). Traefik ingress is disabled to rely on native Service LoadBalancers.
-- **Agent Node:** Worker node (`192.168.56.11`) where workloads are scheduled.
-- **Networking:** Flannel CNI is explicitly bound to the private host-only network to ensure reliable cross-node pod communication.
+1. **Compute (AWS ECS with AWS Fargate):** Replaced Kubernetes pods. Fargate provides serverless compute for containers, eliminating the need to manage underlying EC2 instances.
+2. **Container Registry (AWS ECR):** Replaced Docker Hub. We migrated custom images to Amazon Elastic Container Registry to avoid Docker Hub rate limits and reduce latency. We utilize the AWS Public ECR for official images (like PostgreSQL and RabbitMQ).
+3. **Service Discovery (AWS Cloud Map):** Replaced Kubernetes internal DNS (CoreDNS). Cloud Map allows microservices to communicate securely via a private namespace (`backend.local`).
+4. **Data Persistence (Fargate Ephemeral Storage):** Replaced Kubernetes Persistent Volumes (PV/PVC). EFS was originally provisioned, but due to strict POSIX root-ownership security constraints in PostgreSQL, databases currently utilize Fargate's built-in 20GB ephemeral storage to ensure high availability.
+5. **Load Balancing & Routing (AWS ALB):** Replaced Kubernetes Ingress. The Application Load Balancer routes external traffic to the API Gateway.
+6. **Authentication (AWS Cognito):** Replaced basic auth. The ALB integrates directly with Cognito to enforce user authentication at the network edge before traffic ever reaches the containers.
+7. **Secrets Management (AWS SSM Parameter Store):** Replaced Kubernetes Secrets. Database credentials and RabbitMQ passwords are encrypted via KMS and injected securely into containers at runtime.
 
-### Application Components
+```mermaid
+graph TD
+    Client((User))
+    TF[Terraform CLI<br>Infrastructure as Code]
 
-- **API Gateway (`api-gateway-app`):**
-  - The single entry point exposed to the host machine via a `LoadBalancer` service on port 3000.
-  - Deployed as a `Deployment` with a Horizontal Pod Autoscaler (HPA) configured to scale up to 3 replicas when CPU exceeds 60%.
-  - Routes synchronous requests to the Inventory Service and publishes asynchronous events to RabbitMQ.
-- **Inventory Service (`inventory-app`):**
-  - Handles synchronous REST API calls (CRUD operations for movies).
-  - Deployed as a `Deployment` with HPA (scales up to 3 replicas at 60% CPU).
-- **Billing Service (`billing-app`):**
-  - An asynchronous background worker that consumes order messages from RabbitMQ.
-  - Deployed as a `StatefulSet` to guarantee strict, ordered processing and stable network identity.
+    subgraph AWS_Cloud [AWS Cloud]
+        Cognito[AWS Cognito<br>Authentication]
+        ECR[AWS ECR<br>Container Images]
+        SSM[AWS SSM Parameter Store<br>Secrets/Passwords]
+        CloudWatch[AWS CloudWatch<br>Logs & Metrics]
 
-### Data & Messaging Layer
+        subgraph VPC [Virtual Private Cloud]
+            ALB[Application Load Balancer]
 
-- **PostgreSQL Databases (`inventory-db` & `billing-db`):**
-  - Isolated database instances for each service (Database-per-Service pattern).
-  - Deployed as `StatefulSets` with `PersistentVolumeClaims` (PVCs).
-  - Uses the K3s default `local-path` provisioner to ensure data survives pod restarts.
-- **RabbitMQ (`rabbitmq-server`):**
-  - Message broker deployed to decouple the API Gateway from the Billing Service.
-  - Facilitates reliable, asynchronous inter-service communication.
+            subgraph Public_Subnets [Public Subnets]
+                NAT[NAT Gateway]
+            end
+
+            subgraph Private_Subnets [Private Subnets - ECS Fargate Cluster]
+                API[api-gateway]
+                InvApp[inventory-app]
+                BillApp[billing-app]
+                Rabbit[rabbitmq-server]
+                InvDB[(inventory-database)]
+                BillDB[(billing-database)]
+            end
+        end
+    end
+
+    %% Traffic Flow
+    Client -->|HTTPS| ALB
+    ALB <-->|Authenticates| Cognito
+    ALB -->|Routes to| API
+
+    %% Internal Service Discovery
+    API -->|backend.local| InvApp
+    API -->|backend.local| BillApp
+    API -->|backend.local| Rabbit
+    BillApp -->|Message Queue| Rabbit
+
+    %% Database Connections
+    InvApp --> InvDB
+    BillApp --> BillDB
+
+    %% Secrets & Images
+    SSM -.->|Injects Secrets| InvDB
+    SSM -.->|Injects Secrets| BillDB
+    ECR -.->|Pulls Images| API
+    ECR -.->|Pulls Images| InvApp
+    ECR -.->|Pulls Images| BillApp
+
+    %% Admin
+    TF -->|Provisions| VPC
+```
 
 ## Prerequisites
 
-- Vagrant
-- VirtualBox
-- kubectl CLI tool
+To deploy this infrastructure, ensure you have the following installed and configured:
 
-## Infrastructure Setup & Management
+- **AWS CLI** (configured with Administrator credentials)
+- **Terraform** (v1.5.0 or higher)
+- **Docker** (to build and push images)
 
-### Build the Master and Agent VMs and Kubernetes cluster
+## Setup and Deployment
 
-chmod +x orchestrator.sh
-./orchestrator.sh start
+### 1. Initialize Infrastructure
 
-### Before the kubectl test commands everytime on a new terminal
+Navigate to the `terraform` directory containing the `.tf` configuration files:
 
-export KUBECONFIG=$PWD/k3s.yaml
+```bash
+terraform init
+terraform validate
+terraform plan
+terraform apply
+```
 
-### Test the cluster
+### 2. Push Docker Images to AWS ECR
 
-kubectl get nodes
+After Terraform provisions the empty ECR repositories, authenticate Docker and push your images:
 
-### Verify the HPA (Autoscaling 1%/60%)
-
-kubectl get hpa
-
-## API Testing with Postman
-
-A Postman Collection is included in the repository to automate the audit tests:
-Open Postman and click Import.
-Select the orchestrator_API_tests.json file.
-In the imported collection, go to the Variables tab.
-Ensure base_url is set to http://192.168.56.10:3000 (or your VM's IP if testing remotely).
-Run the requests to verify Inventory CRUD operations and the asynchronous Billing Queue.
-
-## Autoscalling test
-
-Step 1: Open a terminal and watch the autoscaler live: kubectl get hpa -w
-
-Step 2: Open a second terminal and watch the pods: kubectl get pods -w
-
-Step 3: Open a third terminal and generate massive load Run this infinite loop to spam the API with hundreds of requests per second: while true; do curl -s http://192.168.56.10:3000/api/movies > /dev/null; done
-
-Push docker images after AWS infrastructure being established
-
+```bash
+# Authenticate
 aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 327425719370.dkr.ecr.eu-north-1.amazonaws.com
 
-docker pull borsok/api-gateway-app:v1
-docker pull borsok/inventory-app:v1
-docker pull borsok/billing-app:v1
-docker pull borsok/rabbitmq-server:v1
-docker pull borsok/inventory-db:v1
-docker pull borsok/billing-db:v1
+# Tag images for ECR
+docker tag <username>/api-gateway-app:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/api-gateway-app:v1
+docker tag <username>/inventory-app:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-app:v1
+docker tag <username>/billing-app:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-app:v1
+docker tag <username>/rabbitmq-server:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/rabbitmq-server:v1
+docker tag <username>/inventory-db:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-db:v1
+docker tag <username>/billing-db:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-db:v1
 
-docker tag borsok/api-gateway-app:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/api-gateway-app:v1
-docker tag borsok/inventory-app:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-app:v1
-docker tag borsok/billing-app:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-app:v1
-docker tag borsok/rabbitmq-server:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/rabbitmq-server:v1
-docker tag borsok/inventory-db:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-db:v1
-docker tag borsok/billing-db:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-db:v1
-
+# Push images
 docker push 327425719370.dkr.ecr.eu-north-1.amazonaws.com/api-gateway-app:v1
 docker push 327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-app:v1
 docker push 327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-app:v1
 docker push 327425719370.dkr.ecr.eu-north-1.amazonaws.com/rabbitmq-server:v1
 docker push 327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-db:v1
 docker push 327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-db:v1
+```
 
-Step 1: Send a POST request via the Browser Console
-Open your browser to your working URL: https://microservices-alb-1244665812.eu-north-1.elb.amazonaws.com/api/movies (Make sure you see []).
-Press F12 to open Developer Tools and click on the Console tab.
-Copy and paste this exact JavaScript code into the console and hit Enter:
+## Audit Tests
 
-fetch('/api/movies', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-title: "AWS Cloud Audit",
-description: "Testing my microservices"
+### 1. API Post/Get Functionality
+
+Open your browser to `https://<YOUR_ALB_URL>/api/movies` (Ensure you see `[]`). Press F12 to open Developer Tools, go to the Console, and run:
+
+```javascript
+fetch("/api/movies", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    title: "AWS Cloud Audit",
+    description: "Testing my microservices",
+  }),
 })
-}).then(res => res.json()).then(console.log);
-Refresh your browser page. You will no longer see []. You will see the movie you just added! This proves the inventory-app successfully wrote to the PostgreSQL database.
+  .then((res) => res.json())
+  .then(console.log);
+```
 
-Step 2: Test the Billing App (RabbitMQ)
-Do the exact same thing, but point it to your billing route (adjust the URL and JSON payload to match whatever your billing-app expects):
+_Refresh the browser page to verify the GET request returns the newly created data._
 
-fetch('/api/billing', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-user_id: "auditor_123",
-amount: 100.00
-})
-}).then(res => res.json()).then(console.log);
-Step 3: Show the Auditor the Proof in AWS
-Instead of showing a terminal, show them CloudWatch:
-
-Go to the AWS Console -> CloudWatch -> Log groups.
-Open /ecs/microservices/rabbitmq-server to show that the broker is running and accepting connections.
-Open /ecs/microservices/billing-app to show the logs where your Python code successfully processed the billing request from the RabbitMQ queue.
-
-Verify Deployment via AWS CLI
-The auditor explicitly asks you to show the use of the AWS CLI to verify the deployment (since you aren't using Kubernetes/kubectl). Run these commands in your terminal to prove to the auditor that everything is running:
+### 2. Verify Deployment via AWS CLI
 
 Show the cluster exists:
 
-bash
+```bash
 aws ecs list-clusters --region eu-north-1
-Show all 6 services are running:
+```
 
-bash
+Show all services are running:
+
+```bash
 aws ecs list-services --cluster microservices-cluster --region eu-north-1
+```
+
 Show that the tasks (containers) are active:
 
-bash
+```bash
 aws ecs list-tasks --cluster microservices-cluster --region eu-north-1
+```
 
-Q: Are the microservices communicating securely (auth/encryption)?
-You need to hit 3 points here to impress the auditor:
+### 3. Security (Auth & Encryption)
 
-Authentication: "We offloaded authentication to the edge. Go to the Load Balancer, look at the Listeners, and you will see AWS Cognito intercepts all traffic before it even touches our containers."
-Encryption: "External traffic is encrypted via HTTPS using an AWS ACM certificate attached to the Load Balancer."
-Network Security: "Inside the cloud, communication is highly secure. First, all microservices are in Private Subnets with no public IP addresses. Second, we use strict Security Groups (Firewalls) so the databases only accept traffic from the application layer on port 5432. Finally, database passwords are not hardcoded; they are encrypted using AWS SSM Parameter Store and injected securely into the containers at runtime."
+- **Authentication:** Offloaded to the edge via AWS Cognito attached to the ALB Listener.
+- **Encryption:** Traffic is encrypted via HTTPS using an AWS ACM certificate.
+- **Network Security:** Microservices reside in Private Subnets. Strict Security Groups limit database access to port 5432. Passwords are injected at runtime via SSM Parameter Store.
 
-AutoScaling Trigger Test:
+### 4. AutoScaling Trigger Test
 
-while true; do curl -s -k "https://microservices-alb-XXXXXXXX.eu-north-1.elb.amazonaws.com/api/movies" -H "cookie: AWSELBAuthSessionCookie-0=YOUR_COOKIE_HERE" > /dev/null; done
+Force a CPU spike to trigger the Target Tracking scaling policy:
 
-Policy
+```bash
+while true; do curl -s -k "https://<YOUR_ALB_URL>/api/movies" -H "cookie: AWSELBAuthSessionCookie-0=YOUR_COOKIE_HERE" > /dev/null; done
+```
+
+Verify the policy via CLI:
+
+```bash
 aws application-autoscaling describe-scaling-policies --service-namespace ecs --region eu-north-1
+```
 
-Billing resilience test:
+### 5. Billing Resilience Test (RabbitMQ)
 
-Stop billing-app
+Step A: Stop the billing application.
+
+```bash
 aws ecs update-service --cluster microservices-cluster --service billing-app-service --desired-count 0 --region eu-north-1
+```
 
-Send billing request through the browser console:
-fetch('/api/billing', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-user_id: "auditor_test_123",
-number_of_items: 7,
-total_amount: 500.00
+Step B: Send a billing request (Hold in RabbitMQ).
+
+```javascript
+fetch("/api/billing", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    user_id: "auditor_test_123",
+    number_of_items: 7,
+    total_amount: 500.0,
+  }),
 })
-}).then(res => res.json()).then(console.log);
+  .then((res) => res.json())
+  .then(console.log);
+```
 
-Restart the Billing Service:
+Step C: Restart the billing service and verify processing via CloudWatch Logs.
+
+```bash
 aws ecs update-service --cluster microservices-cluster --service billing-app-service --desired-count 1 --region eu-north-1
+```
 
 ## Project Tree
 
