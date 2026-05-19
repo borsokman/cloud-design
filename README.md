@@ -98,23 +98,23 @@ After Terraform provisions the empty ECR repositories, authenticate Docker and p
 
 ```bash
 # Authenticate
-aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 327425719370.dkr.ecr.eu-north-1.amazonaws.com
+aws ecr get-login-password --region <YOUR_REGION> | docker login --username AWS --password-stdin <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com
 
 # Tag images for ECR
-docker tag <username>/api-gateway-app:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/api-gateway-app:v1
-docker tag <username>/inventory-app:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-app:v1
-docker tag <username>/billing-app:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-app:v1
-docker tag <username>/rabbitmq-server:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/rabbitmq-server:v1
-docker tag <username>/inventory-db:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-db:v1
-docker tag <username>/billing-db:v1 327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-db:v1
+docker tag <username>/api-gateway-app:v1 <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com/api-gateway-app:v1
+docker tag <username>/inventory-app:v1 <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com/inventory-app:v1
+docker tag <username>/billing-app:v1 <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com/billing-app:v1
+docker tag <username>/rabbitmq-server:v1 <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com/rabbitmq-server:v1
+docker tag <username>/inventory-db:v1 <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com/inventory-db:v1
+docker tag <username>/billing-db:v1 <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com/billing-db:v1
 
 # Push images
-docker push 327425719370.dkr.ecr.eu-north-1.amazonaws.com/api-gateway-app:v1
-docker push 327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-app:v1
-docker push 327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-app:v1
-docker push 327425719370.dkr.ecr.eu-north-1.amazonaws.com/rabbitmq-server:v1
-docker push 327425719370.dkr.ecr.eu-north-1.amazonaws.com/inventory-db:v1
-docker push 327425719370.dkr.ecr.eu-north-1.amazonaws.com/billing-db:v1
+docker push <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com/api-gateway-app:v1
+docker push <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com/inventory-app:v1
+docker push <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com/billing-app:v1
+docker push <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com/rabbitmq-server:v1
+docker push <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com/inventory-db:v1
+docker push <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_REGION>.amazonaws.com/billing-db:v1
 ```
 
 ## Audit Tests
@@ -143,19 +143,19 @@ _Refresh the browser page to verify the GET request returns the newly created da
 Show the cluster exists:
 
 ```bash
-aws ecs list-clusters --region eu-north-1
+aws ecs list-clusters --region <YOUR_REGION>
 ```
 
 Show all services are running:
 
 ```bash
-aws ecs list-services --cluster microservices-cluster --region eu-north-1
+aws ecs list-services --cluster microservices-cluster --region <YOUR_REGION>
 ```
 
 Show that the tasks (containers) are active:
 
 ```bash
-aws ecs list-tasks --cluster microservices-cluster --region eu-north-1
+aws ecs list-tasks --cluster microservices-cluster --region <YOUR_REGION>
 ```
 
 ### 3. Security (Auth & Encryption)
@@ -175,7 +175,7 @@ while true; do curl -s -k "https://<YOUR_ALB_URL>/api/movies" -H "cookie: AWSELB
 Verify the policy via CLI:
 
 ```bash
-aws application-autoscaling describe-scaling-policies --service-namespace ecs --region eu-north-1
+aws application-autoscaling describe-scaling-policies --service-namespace ecs --region <YOUR_REGION>
 ```
 
 ### 5. Billing Resilience Test (RabbitMQ)
@@ -183,7 +183,7 @@ aws application-autoscaling describe-scaling-policies --service-namespace ecs --
 Step A: Stop the billing application.
 
 ```bash
-aws ecs update-service --cluster microservices-cluster --service billing-app-service --desired-count 0 --region eu-north-1
+aws ecs update-service --cluster microservices-cluster --service billing-app-service --desired-count 0 --region <YOUR_REGION>
 ```
 
 Step B: Send a billing request (Hold in RabbitMQ).
@@ -205,7 +205,7 @@ fetch("/api/billing", {
 Step C: Restart the billing service and verify processing via CloudWatch Logs.
 
 ```bash
-aws ecs update-service --cluster microservices-cluster --service billing-app-service --desired-count 1 --region eu-north-1
+aws ecs update-service --cluster microservices-cluster --service billing-app-service --desired-count 1 --region <YOUR_REGION>
 ```
 
 ## Project Tree
